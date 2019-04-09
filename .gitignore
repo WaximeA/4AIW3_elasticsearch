@@ -1,13 +1,22 @@
 .idea
 
 apps/node1/elasticsearch-6.7.1/bin/
+apps/node1/elasticsearch-6.7.1/config/elasticsearch.keystore
+apps/node1/elasticsearch-6.7.1/data/
 apps/node1/elasticsearch-6.7.1/lib/
+apps/node1/elasticsearch-6.7.1/logs/
 apps/node1/elasticsearch-6.7.1/modules/
 
 apps/node2/elasticsearch-6.7.1/bin/
+apps/node2/elasticsearch-6.7.1/config/elasticsearch.keystore
+apps/node2/elasticsearch-6.7.1/data/
 apps/node2/elasticsearch-6.7.1/lib/
+apps/node2/elasticsearch-6.7.1/logs/
 apps/node2/elasticsearch-6.7.1/modules/
 
 apps/node3/elasticsearch-6.7.1/bin/
+apps/node3/elasticsearch-6.7.1/config/elasticsearch.keystore
+apps/node3/elasticsearch-6.7.1/data/
 apps/node3/elasticsearch-6.7.1/lib/
+apps/node3/elasticsearch-6.7.1/logs/
 apps/node3/elasticsearch-6.7.1/modules/
