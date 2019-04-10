@@ -55,3 +55,14 @@ apps/node8/elasticsearch-6.7.1/data/
 apps/node8/elasticsearch-6.7.1/lib/
 apps/node8/elasticsearch-6.7.1/logs/
 apps/node8/elasticsearch-6.7.1/modules/
+
+apps/kibana/bin/
+apps/kibana/built_assets/
+apps/kibana/data/
+apps/kibana/node/
+apps/kibana/node_modules/
+apps/kibana/optimize/
+apps/kibana/plugins/
+apps/kibana/src/
+apps/kibana/target/
+apps/kibana/webpackShims/
