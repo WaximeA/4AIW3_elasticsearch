@@ -86,3 +86,9 @@ http.port: 9208
 # Require explicit names when deleting indices:
 #
 #action.destructive_requires_name: true
+
+# Custom node roles
+node.master: false
+node.data: false
+node.ingest: true
+cluster.remote.connect: false
