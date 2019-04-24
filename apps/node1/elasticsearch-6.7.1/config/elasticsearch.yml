@@ -90,5 +90,5 @@ http.port: 9201
 # Custom node roles
 #node.master: true
 #node.data: false
-#node.ingest: false
+#node.ingest: true
 #cluster.remote.connect: false

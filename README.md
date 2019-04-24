@@ -344,3 +344,211 @@ PUT /french_example?include_type_name=false
 ## Analyser open-source
 [Phonetic French Analyser](https://github.com/hcapitaine/french-phonetic-analyser)
 
+
+# Cours 2 
+
+Moteur de recherche scalable à l'infini. Scalabilité horizontal car plus on a besoin de recherche etc, plus on peut ajouter de clusters à l'oposé d'une scalabilité verticale dite de hardware qui est limitée.
+
+Un **cluster** c'est un regroupement de noeuds.
+Le cluster a 3 status : 
+- green : tout OK
+- yellow : Il y a un risque de perdre des datas si ya un problème
+- red : NOK
+
+Un cluster gère les shards des index pour gérer les problème. Il y a un mécanisme pour gérer la dispo des données. Il y a donc la donnée primaire (copie principale) et des duplicat. 
+
+Donc un cluster gère la réplication de la donnée (la résiliance de donnée) dans les shards.
+Cette gestion des copies principales et duplicats est interdit sur le même noeuds. Donc si on a pas assez de noeuds pour faire la résoliance, le cluster se met en état jaune.
+
+
+Les **noeuds** sont des instances d'elasticsearch qui peuvent communiqués entre eux. Ils peuvent avoir plusieurs types : 
+- data => contient de la donnée.
+- master => gère les indexes de données et chaque index 
+- ingest => envoi de la donnée
+Il est important de pas mettre les 3 types de noeuds au même noeud car ils auront trop de choses à gérer. 
+
+Un **index** est l'organisation de shards.
+
+Un **shard** est composé de plusieurs segments.
+
+Un **segment** sont des data immuables à un niveau très bas.
+
+
+
+Un **analyser** regroupe le caracter filter, le tokeniser ensuite le token filter. Il est utiliser pour les recherches de haut niveau, full text.
+
+
+## 1. API de recherche
+
+- API REST elasticsearch -> client applicatif
+- HTTP:9200
+- client : postman, browser, kibana
+- méthodes http : get put patch delete
+
+
+`GET _search`
+result : 
+```
+{
+  "took" : 6, ==> le temps que ça a pris 
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 3, ==> total des shards qui ont rep
+    "successful" : 3, ==> ceux qui sont OK
+    "skipped" : 0, ==> ceux qui ont été ignorés
+    "failed" : 0 ==> ceux qui ont fail
+    },
+    "hits" : {
+    "total" : 6, ==> nombre total de result
+    "max_score" : 1.0, ==> score de pertinance
+    "hits" : [ ==> 
+      {
+        "_index" : ".kibana_1",
+        "_type" : "doc",
+        "_id" : "space:default",
+        "_score" : 1.0,
+        "_source" : {
+          "space" : {
+            "name" : "Default",
+            "description" : "This is your default space!",
+            "color" : "#00bfb3",
+            "_reserved" : true
+          },
+          "type" : "space",
+          "updated_at" : "2019-04-10T12:56:36.542Z"
+        }
+      },
+```
+
+## 2. Filtres et requêtes
+
+Recherche structurée VS non-structurée
+
+### Structurée :
+- une seule val strictement identifié
+- nom du pays = France
+- année > 2018
+- une réponse binaire : oui/non
+
+### Non-structurée : 
+- plusieurs "éléments" de la donnée
+- Mer du nord contient le mot nord
+- la réponse intègre un score de pertinence
+
+### Contexte de filtre :
+- Oui ou non le doc répond à la recherche
+- avec données structurée
+
+### Contexte de requête :
+- Dans quelle mesure le doc correspond à la recherche
+- reponse avec un score de pertinence
+- données non structurée, full text
+ 
+
+## 3. Différents types de requêtes
+
+### Term-based
+
+- bas niveau
+- sans phrase d'analyse
+- un seul mot
+- exemple : term, termes, range, exists, fuzzy
+
+### Full text
+
+- haut niveau
+- utilise analyseur associé au champ pour transformer la requête
+- exemples : match_all, match, multi_match
+
+
+## Exercie 
+
+### Définir l'index pays
+
+```
+DELETE pays
+PUT pays 
+{
+  "mappings": {
+    "_doc": { 
+      "properties": { 
+        "nom": { "type": "text" }, 
+        "capital": { "type": "text" }, 
+        "population_million": { "type": "integer"},
+        "description": {"type": "text"}
+      }
+    }
+  }
+}
+```
+
+Récupérer le mapping d'un index : 
+```
+GET pays/_mapping
+```
+
+### Ajouter des données à l'index 
+
+```
+POST pays/_doc/
+{
+  "nom": "France",
+  "capitale": "Paris",
+  "population_million": 300,
+  "description": "La France, du fromage, du pain, du vin etc"
+}
+
+POST pays/_doc/
+{
+  "nom": "Espagne",
+  "capitale": "Madrid",
+  "population_million": 150,
+  "description": "Un, dos, tres, un pacito para Maria"
+}
+```
+
+On peut très bien ajouter de la donnée à la volée sans mapping, ça va le générer automatiquement.
+
+### Récupérer la donnée : 
+
+```
+GET pays/_search
+GET pays/_search?q=nom:France
+```
+
+Analyser la donnée : 
+
+```
+GET pays/_analyze 
+{
+  "text": ["France"]
+}
+```
+
+### Récupérer la donnée avec des intervales
+
+```
+GET pays/_search
+{
+  "query" : {
+    "range" : {
+      "population_million": {
+        "gt" : 155
+      }
+    }
+  }
+}
+```
+
+### Vérifier si un champs existe dans un index
+
+```
+GET pays/_search
+{
+  "query" : { 
+    "exists" : {
+      "field" : "nom"
+    }
+  }
+}
+```
