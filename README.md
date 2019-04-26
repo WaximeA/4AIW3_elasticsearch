@@ -461,7 +461,7 @@ Recherche structurée VS non-structurée
 - exemples : match_all, match, multi_match
 
 
-## Exercie 
+## Exercices : La Recherche
 
 ### Définir l'index pays
 
@@ -552,3 +552,418 @@ GET pays/_search
   }
 }
 ```
+
+## Exercices : Les jointures
+
+### #1. Type "Nested"
+
+Le type nested est la modalité d'introduire une strucutre plus élaborée à l'interieur d'un index.
+
+Exemple de plusieurs niveaux d'imbrications dans un index "article" :
+
+```
+POST articles/_doc/veste1
+{
+  "nom": "Veste en cuir",
+  "desription": "Magnifique veste en cuir",
+  "caract": [
+    {
+      "taille": "Small",
+      "couleur": "White"
+    }
+  ]
+}
+POST articles/_doc/veste2
+{
+  "nom": "Veste en cuir new generation",
+  "desription": "Magnifique veste en cuir new generation",
+  "caract": [
+    {
+      "taille": "Small",
+      "couleur": "Black"
+    }
+  ]
+}
+POST articles/_doc/pull1
+{
+  "nom": "Pull de laine",
+  "desription": "Magnifique pull en laine",
+  "caract": [
+    {
+      "taille": "Large",
+      "couleur": "Black"
+    }
+  ]
+}
+POST articles/_doc/pull2
+{
+  "nom": "Pull de laine",
+  "desription": "Magnifique pull en laine",
+  "caract": [
+    {
+      "taille": "Small",
+      "couleur": "White"
+    }
+  ]
+}
+POST articles/_doc/tshort1
+{
+  "nom": "T-Shirt en jean",
+  "desription": "Magnifique T-Shirt en jean",
+  "caract": [
+    {
+      "taille": "Medium",
+      "couleur": "Yellow"
+    }
+  ]
+}
+```
+
+Commandes de bases : 
+
+```
+GET articles/_search
+GET articles/_mapping
+DELETE articles
+```
+
+Result du mapping : 
+
+```
+{
+  "articles" : {
+    "mappings" : {
+      "_doc" : {
+        "properties" : {
+          "caract" : {
+            "properties" : {
+              "couleur" : {
+                *{data}
+              },
+              "taille" : {
+                *{data}
+              }
+            }
+          },
+          "desription" : {
+            *{data}
+          },
+          "nom" : {
+            *{data}
+          }
+        }
+      }
+    }
+  }
+}
+
+*{data}: {
+ "type" : "text",
+ "fields" : {
+   "keyword" : {
+     "type" : "keyword",
+     "ignore_above" : 256
+   }
+ }
+```
+
+Recherche via une caract avec le type nested : 
+
+```
+GET /articles/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "nested": {
+            "path": "caract",
+            "score_mode": "max", 
+            "query": {
+              "bool": {
+                "must": [
+                  {
+                    "match": {
+                      "caract.taille": "Small"
+                    }
+                    
+                  },
+                  {
+                    "match": {
+                      "caract.couleur": "Black"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+Pour que ça marche, il faut rajouter un **mapping** qui défini le mapping avec un type nested : 
+
+```
+PUT articles 
+{
+  "mappings": {
+    "_doc": { 
+      "properties": { 
+        "nom": { "type": "text" }, 
+        "description": { "type": "text" }, 
+        "caract": { 
+          "type": "nested", 
+          "properties": {
+            "taille": { "type": "text" },
+            "couleur": { "type": "text" }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+On se retrouve donc uniquement avec le produit qui a les deux valeurs de la query de la recherche.
+
+### #2. Type "Join" : relation document parent/enfant
+
+C'est la modalité pour implémenter des jointures entre plusieurs index.
+
+Le type join permet d'appeler les deux catégories de documents dans un seul et même index.
+
+Il faut donc : 
+1. Faire le mapping de l'index
+
+```
+PUT administration_territoriale
+{
+  "mappings": {
+    "_doc": {
+      "properties": {
+        "mon_administration": {
+          "type": "join",
+          "relations": {
+            "region": "departement"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+2. Indexation du document parent
+
+Indexation des régions
+```
+
+## Régions
+PUT administration_territoriale/_doc/r1
+{
+  "nom_region": "Auvergne-Rhône-Alpes",
+  "mon_administration": {
+    "name": "region"
+  }
+}
+PUT administration_territoriale/_doc/r10
+{
+  "nom_region": "Alsace-Champagne-Ardenne-Lorraine",
+  "mon_administration": {
+    "name": "region"
+  }
+}
+
+```
+
+3. Indexation du document enfant
+
+Indexation des départements : 
+
+```
+## Départements
+PUT administration_territoriale/_doc/d1?routing=r1
+{
+  "nom_departement": "Ain",
+  "mon_administration": {
+    "name": "departement",
+    "parent": "r1"
+  }
+}
+PUT administration_territoriale/_doc/d1?routing=r10
+{
+  "nom_departement": "Aube",
+  "mon_administration": {
+    "name": "departement",
+    "parent": "r10"
+  }
+}
+```
+
+4. Recherche parent / enfant
+
+
+Recherche des enfants par rapport à leur nom : 
+```
+GET administration_territoriale/_search
+{
+  "query": {
+    "has_child": {
+      "type": "departement",
+      "query": {
+        "term": {
+          "nom_departement.keyword": {
+            "value": "Aube"
+          }
+        }
+      },
+    "inner_hits": {}
+    }
+  }
+}
+```
+
+Cela renvoi les document enfants (avec le document parent grace au inner_hits).
+Result : 
+
+```
+{
+  "took" : 40,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 5,
+    "successful" : 5,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : 1,
+    "max_score" : 1.0,
+    "hits" : [
+      {
+        "_index" : "administration_territoriale",
+        "_type" : "_doc",
+        "_id" : "r10",
+        "_score" : 1.0,
+        "_source" : {
+          "nom_region" : "Alsace-Champagne-Ardenne-Lorraine",
+          "mon_administration" : {
+            "name" : "region"
+          }
+        },
+        "inner_hits" : {
+          "departement" : {
+            "hits" : {
+              "total" : 1,
+              "max_score" : 0.2876821,
+              "hits" : [
+                {
+                  "_index" : "administration_territoriale",
+                  "_type" : "_doc",
+                  "_id" : "d1",
+                  "_score" : 0.2876821,
+                  "_routing" : "r10",
+                  "_source" : {
+                    "nom_departement" : "Aube",
+                    "mon_administration" : {
+                      "name" : "departement",
+                      "parent" : "r10"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+Recherche des parents par rapport à leur nom : 
+
+```
+GET administration_territoriale/_search
+{
+  "query": {
+    "has_parent": {
+      "parent_type": "region",
+      "query": {
+        "term": {
+          "nom_region.keyword": {
+            "value": "Alsace-Champagne-Ardenne-Lorraine"
+          }
+        }
+      },
+      "inner_hits": {}
+    }
+  }
+}
+```
+
+result de tous les département avec leur région (Alsace-Champagne-Ardenne-Lorraine) : 
+
+```
+{
+  "took" : 31,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 5,
+    "successful" : 5,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : 1,
+    "max_score" : 1.0,
+    "hits" : [
+      {
+        "_index" : "administration_territoriale",
+        "_type" : "_doc",
+        "_id" : "d1",
+        "_score" : 1.0,
+        "_routing" : "r10",
+        "_source" : {
+          "nom_departement" : "Aube",
+          "mon_administration" : {
+            "name" : "departement",
+            "parent" : "r10"
+          }
+        },
+        "inner_hits" : {
+          "region" : {
+            "hits" : {
+              "total" : 1,
+              "max_score" : 0.2876821,
+              "hits" : [
+                {
+                  "_index" : "administration_territoriale",
+                  "_type" : "_doc",
+                  "_id" : "r10",
+                  "_score" : 0.2876821,
+                  "_source" : {
+                    "nom_region" : "Alsace-Champagne-Ardenne-Lorraine",
+                    "mon_administration" : {
+                      "name" : "region"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+### #3. La recherche multi-cluster
+
+Doc : using cross cluster search
+
+### #4. La sauvegarde et la restauration
