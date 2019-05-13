@@ -357,7 +357,7 @@ Le cluster a 3 status :
 
 Un cluster gère les shards des index pour gérer les problème. Il y a un mécanisme pour gérer la dispo des données. Il y a donc la donnée primaire (copie principale) et des duplicat. 
 
-Donc un cluster gère la réplication de la donnée (la résiliance de donnée) dans les shards.
+Donc un cluster gère la réplication de la donnée (la résilience de donnée) dans les shards.
 Cette gestion des copies principales et duplicats est interdit sur le même noeuds. Donc si on a pas assez de noeuds pour faire la résoliance, le cluster se met en état jaune.
 
 
@@ -967,3 +967,624 @@ result de tous les département avec leur région (Alsace-Champagne-Ardenne-Lorr
 Doc : using cross cluster search
 
 ### #4. La sauvegarde et la restauration
+
+---
+
+# Cours 3
+
+## Questions :
+
+1. Quels sont les types de noeud ?
+    - Master
+    - Data
+    - Injest
+
+    Mais y'en a d'autres comme machine-learning etc
+
+2. De quoi est composé un index ?
+
+    De shards
+
+3. Comment elastic assure la disponibilité de la donnée ?
+
+    Il duplique la donnée des shards sur l'ensemble des noeuds du cluster afin d'assurer la résilience des données.
+
+4. A quoi correspond l'index et le type ?
+    
+    L'index correspond à la BDD et le type à la table en faisant un paralèle à une base de donnée structurelle
+    
+# Les agrégations :
+
+#### Terminologie
+**ATTENTION** une agrégation est aussi plus courament appelée **facette** ou **filtre non activé** en français. Ce n'est pas une donnée rentrée en dur dans le code, elle se génère automatiquement d'après le moteur de recherche.
+
+## 0. Les cas d'utilisation
+
+Sur le site de carrefour, quand on fait une recherche, des **facettes** se créées en fonction de la recherche pour afiner la recherches, ex: marque, couleur...
+
+![Carrefour aggregations](images/carrefour_aggregations.png)
+
+_Exemple d'agrégations (à droite) sur le site carrefour_
+
+
+## 1. Indexation "bulk" pour exercice
+
+Lancer cette commande pour indéxer la donnée du fichier dans le noeud lancé `localhost:9201`.
+```
+$ curl -XPOST -H "Content-Type: application/json" "http://localhost:9201/_bulk?pretty" --data-binary @earthquake_bulk.json
+```
+
+On peut ensuite faire des recherches sur ce doc sur kibana.
+
+
+Pour créer un agrégation il faut le noeud `aggs` qui a le même fonctionnement que le group by sql.
+
+```
+GET earthquake/_search
+{
+  "size": 0, 
+  "aggs": { 
+    "facette_name": { 
+      "terms": {
+        "field": "source.keyword",
+        "size": 10
+      }
+    }
+  }
+}
+```
+
+`"size": 0,` Pour ne pas remonter l'ensemble des résultats d'un document. Pour une question de pertinance et de performance ()
+
+`"aggs": {}` Pour définir l'agrégation (ça marche aussi avec "aggregation")
+
+`"facette_name": {` peut être utilisé par la suite pour faire référence aux valeurs de cette agrégation.
+
+`"terms": {` C'est un type d'agrégation
+
+### Retour
+
+Cela retourne l'ensemble des résultats de manière décroissant avec chaque "clef" et le nombre de résultats pour cette clef : 
+
+```
+        {
+          "key" : "OFFICIAL",
+          "doc_count" : 8
+        },
+        {
+          "key" : "UW",
+          "doc_count" : 6
+        },
+        {
+          "key" : "NN",
+          "doc_count" : 4
+        }
+```
+
+## 2. Les agrégations pour métrique
+
+[Documentation agg metric](https://www.elastic.co/guide/en/elasticsearch/reference/6.5/search-aggregations-metrics.html)
+
+Exemples : **min, max, avg** plutôt adapté à des valeurs nuériques pour des calculs mathématiques.
+
+### Exercies :
+1 . Quel est le tremblement de terre le plus faible ?
+```
+POST earthquake/_search?size=0
+{
+    "aggs" : {
+        "min_magnitude" : { "min" : { "field" : "magnitude" } }
+    }
+}
+```
+
+result : 
+```
+  "aggregations" : {
+    "min_magnitude" : {
+      "value" : 5.5
+    }
+  }
+```
+
+2 . Quel est le tremblement de terre le plus fort ?
+
+```
+POST earthquake/_search?size=0
+{
+    "aggs" : {
+        "max_magnitude" : { "max" : { "field" : "magnitude" } }
+    }
+}
+```
+
+result : 
+```
+  "aggregations" : {
+    "max_magnitude" : {
+      "value" : 9.100000381469727
+    }
+  }
+```
+
+3 . Quelle est la valeur moyenne de la magnitude enregistrée ?
+
+```
+POST earthquake/_search?size=0
+{
+    "aggs" : {
+        "avg_magnitude" : { "avg" : { "field" : "magnitude" } }
+    }
+}
+```
+
+result :
+```
+  "aggregations" : {
+    "avg_magnitude" : {
+      "value" : 5.882542801771001
+    }
+  }
+```
+
+4 . Quelle est la somme de toutes les valeurs de magnitude enregistrée ?
+
+```
+POST earthquake/_search?size=0
+{
+    "aggs" : {
+        "magnitude_sum" : { "sum" : { "field" : "magnitude" } }
+    }
+}
+```
+
+result :
+```
+  "aggregations" : {
+    "magnitude_sum" : {
+      "value" : 137716.2095322609
+    }
+  }
+```
+
+5 . **Sinon pour tout avoir :**
+
+```
+POST earthquake/_search?size=0
+{
+    "aggs" : {
+        "magnitude_stats" : { 
+          "extended_stats": { 
+            "field" : "magnitude" 
+          }
+        }
+    }
+}
+```
+marche aussi avec `stats`
+
+result: 
+```
+"aggregations" : {
+    "magnitude_stats" : {
+      "count" : 23411,
+      "min" : 5.5,
+      "max" : 9.100000381469727,
+      "avg" : 5.882542801771001,
+      "sum" : 137716.2095322609,
+      "sum_of_squares" : 814311.6245206672,
+      "variance" : 0.1789811391858131,
+      "std_deviation" : 0.4230616257542311,
+      "std_deviation_bounds" : {
+        "upper" : 6.728666053279463,
+        "lower" : 5.036419550262538
+      }
+    }
+  }
+```
+
+## 3. Les agrégation de type "bucket"
+
+[Documentation agg bucket](https://www.elastic.co/guide/en/elasticsearch/reference/6.5/search-aggregations-bucket.html)
+
+Exemples : **terms, histogram, top_hits** plutôt adapté à des valeurs textuelles.
+
+### Exercices : 
+1 . Combien de catégories de tremblements de terre en fonction de la profondeur ?
+
+```
+POST earthquake/_search?size=0
+{
+    "aggs" : {
+        "depth_histogram" : { 
+          "histogram": { 
+            "field" : "depth",
+            "interval": 100
+          }
+        }
+    }
+}
+```
+
+`"field" : "depth",` On prend le champ profondeur
+
+`"interval": 100` On défini un interval
+
+result :
+_Cela nous donnes le nombres de tremblements de terre qu'il y a eu pour chaque interval_
+```
+"aggregations" : {
+    "exemple_basique" : {
+      "buckets" : [
+        {
+          "key" : -100.0,
+          "doc_count" : 1
+        },
+        {
+          "key" : 0.0,
+          "doc_count" : 19679
+        },
+        {
+          "key" : 100.0,
+          "doc_count" : 1926
+        },
+        {
+          "key" : 200.0,
+          "doc_count" : 478
+        },
+        {
+          "key" : 300.0,
+          "doc_count" : 190
+        },
+        {
+          "key" : 400.0,
+          "doc_count" : 215
+        },
+        {
+          "key" : 500.0,
+          "doc_count" : 617
+        },
+        {
+          "key" : 600.0,
+          "doc_count" : 304
+        },
+        {
+          "key" : 700.0,
+          "doc_count" : 1
+        }
+      ]
+    }
+  }
+```
+
+2 . Combien de tremblements de terre par année ?
+
+```
+POST earthquake/_search?size=0
+{
+    "aggs" : {
+        "datetime_histogram" : { 
+          "date_histogram": { 
+            "field" : "@timestamp",
+            "interval": "year"
+          }
+        }
+    }
+}
+```
+
+result :
+```
+        {
+          "key_as_string" : "2016-01-01T00:00:00.000Z",
+          "key" : 1451606400000,
+          "doc_count" : 468
+        },
+        {
+          "key_as_string" : "2017-01-01T00:00:00.000Z",
+          "key" : 1483228800000,
+          "doc_count" : 0
+        },
+        {
+          "key_as_string" : "2018-01-01T00:00:00.000Z",
+          "key" : 1514764800000,
+          "doc_count" : 0
+        },
+        {
+          "key_as_string" : "2019-01-01T00:00:00.000Z",
+          "key" : 1546300800000,
+          "doc_count" : 6
+        }
+```
+
+3 . Quels sont les tremblements de terre entre 2011 et 2019 ?
+
+```
+POST earthquake/_search
+{
+    "query" : {
+        "bool": {
+          "filter": {
+            "range": {
+              "@timestamp": {
+                "gte": "2011-01-01T00:00:00.000Z",
+                "lte": "2019-01-01T00:00:00.000Z"
+              }
+            }
+          }
+        }
+    }
+}
+```
+
+result :
+```
+"hits" : {
+    "total" : 3012,
+    "max_score" : 0.0,
+    "hits" : [
+      {
+        "_index" : "earthquake",
+        "_type" : "_doc",
+        "_id" : "2x1IsGoBHhJtY_dwZoo7",
+        "_score" : 0.0,
+        "_source" : {
+          "location_source" : "US",
+          "magnitude" : 5.9,
+          "horizontal_distance" : null,
+          "geoip" : {
+            "lat" : 38.503,
+            "lon" : 143.166
+          },
+          "datetime" : "03/09/201118:44:38",
+          "azimuthal_gap" : "30.7",
+          "magnitude_seismic_stations" : null,
+          "source" : "US",
+          "@timestamp" : "2011-03-09T17:44:38.000Z",
+          "magnitude_type" : "MWW",
+          "magnitude_source" : "US",
+          "status" : "Reviewed",
+          "id" : "USP000HVK9",
+          "depth" : 23
+        }
+      },
+      {
+        "_index" : "earthquake",
+        "_type" : "_doc",
+        "_id" : "-x1IsGoBHhJtY_dwZoo7",
+        "_score" : 0.0,
+        "_source" : {
+          "location_source" : "US",
+          "magnitude" : 5.7,
+          "horizontal_distance" : null,
+          "geoip" : {
+            "lat" : -11.013,
+            "lon" : 166.303
+          },
+          "datetime" : "01/26/201117:03:30",
+          "azimuthal_gap" : "27.8",
+          "magnitude_seismic_stations" : null,
+          "source" : "US",
+          "@timestamp" : "2011-01-26T16:03:30.000Z",
+          "magnitude_type" : "MWC",
+          "magnitude_source" : "GCMT",
+          "status" : "Reviewed",
+          "id" : "USP000HTPB",
+          "depth" : 148
+        }
+      },
+```
+
+Il y a aussi des agégations de type bucket avec missing` pour vérifier si un champs est manquant
+
+## 4. L'agrégation "top hits"
+
+Il correspond aux valeurs les plus élevées.
+
+### Exercies :
+
+1. Quels sont les tremblement de terre le plus profond ? 
+
+```
+POST earthquake/_search?size=0
+{
+    "aggs" : {
+        "depth_top_hits" : { 
+          "top_hits": { 
+            "sort" : [
+                {
+                  "depth": {
+                    "order": "desc"
+                  }
+                }
+              ]
+          }
+        }
+    }
+}
+```
+
+result : cela donne les trois tremblements les plus profonds 
+```
+"aggregations" : {
+    "depth_top_hits" : {
+      "hits" : {
+        "total" : 23411,
+        "max_score" : null,
+        "hits" : [
+          {
+            "_index" : "earthquake",
+            "_type" : "_doc",
+            "_id" : "zB1IsGoBHhJtY_dwZp9D",
+            "_score" : null,
+            "_source" : {
+              "location_source" : "US",
+              "magnitude" : 9.1,
+              "horizontal_distance" : null,
+              "geoip" : {
+                "lat" : 38.297,
+                "lon" : 142.373
+              },
+              "datetime" : "03/11/201105:46:24",
+              "azimuthal_gap" : "9.5",
+              "magnitude_seismic_stations" : null,
+              "source" : "OFFICIAL",
+              "@timestamp" : "2011-03-11T04:46:24.000Z",
+              "magnitude_type" : "MWW",
+              "magnitude_source" : "OFFICIAL",
+              "status" : "Reviewed",
+              "id" : "OFFICIAL20110311054624120_30",
+              "depth" : 29
+            },
+            "sort" : [
+              9.1
+            ]
+          },....
+        ]
+      }
+    }
+}
+```
+
+## 5. Les agrégations en cascade ou agg imbriquées ("pipeline aggregation")
+
+On peut mettre une agrégation dans une agrégation. 
+
+### Exercices: 
+1. Quelle est la valeur moyenne de la magnitude enregistrée pour les tremblements de terre chaque année ?
+
+Il faut découper cette requête en plusieurs agrégations : 
+- Une agg date_histogram de chaque année
+- Dans cet agg, une agg pour la moyenne de la magnitude
+
+```
+POST earthquake/_search?size=0
+{
+  "aggs": {
+      "datetime_histogram_agg": { 
+        "date_histogram": { 
+          "field": "@timestamp",
+          "interval": "year"
+        },
+        "aggs": {
+          "magnitude_avg_agg": {
+            "avg": { 
+              "field": "magnitude"
+              }
+            }
+        }
+      }
+  }
+}
+```
+
+result :
+```
+"aggregations" : {
+    "datetime_histogram_agg" : {
+      "buckets" : [
+        {
+          "key_as_string" : "1965-01-01T00:00:00.000Z",
+          "key" : -157766400000,
+          "doc_count" : 339,
+          "magnitude_avg_agg" : {
+            "value" : 6.0141592771254455
+          }
+        },
+        {
+          "key_as_string" : "1966-01-01T00:00:00.000Z",
+          "key" : -126230400000,
+          "doc_count" : 234,
+          "magnitude_avg_agg" : {
+            "value" : 6.040470068271343
+          }
+        },
+        {
+          "key_as_string" : "1967-01-01T00:00:00.000Z",
+          "key" : -94694400000,
+          "doc_count" : 255,
+          "magnitude_avg_agg" : {
+            "value" : 6.003921531228459
+          }
+        },
+      ]
+    }
+  }
+}
+```
+
+_ici `"key" : -94694400000,` correspond au timestamp de la date `   "key_as_string" : "1967-01-01T00:00:00.000Z",1`. il est négatif car le timestamp 0 se trouve le 1er janvier 1970._
+
+#### Agrégations en cascade
+
+1 . Quelle est la plus grande valeur des moyennes de magnitude calculées pour les tremblements de terre chaque année.
+
+Ici on a besoin de données qui n'existent pas dans le document pour avoir le résultat
+
+```
+POST earthquake/_search?size=0
+{
+  "aggs": {
+      "datetime_histogram_agg": { 
+        "date_histogram": { 
+          "field": "@timestamp",
+          "interval": "year"
+        },
+        "aggs": {
+          "magnitude_avg_agg": {
+            "avg": { 
+              "field": "magnitude"
+              }
+            }
+        }
+      },
+      "max_avg": {
+      "max_bucket": {
+        "buckets_path": "datetime_histogram_agg>magnitude_avg_agg"
+      }
+    }
+  }
+}
+```
+
+result :
+
+```
+"aggregations" : {
+    "datetime_histogram_agg" : {
+      "buckets" : [
+        {
+          "key_as_string" : "1965-01-01T00:00:00.000Z",
+          "key" : -157766400000,
+          "doc_count" : 339,
+          "magnitude_avg_agg" : {
+            "value" : 6.0141592771254455
+          }
+        },
+        {
+          "key_as_string" : "1966-01-01T00:00:00.000Z",
+          "key" : -126230400000,
+          "doc_count" : 234,
+          "magnitude_avg_agg" : {
+            "value" : 6.040470068271343
+          }
+        },
+        {
+          "key_as_string" : "1967-01-01T00:00:00.000Z",
+          "key" : -94694400000,
+          "doc_count" : 255,
+          "magnitude_avg_agg" : {
+            "value" : 6.003921531228459
+          }
+        },
+       ]
+    },
+    "max_avg" : {
+      "value" : 6.078524573904569,
+      "keys" : [
+        "1968-01-01T00:00:00.000Z"
+      ]
+    }
+  }
+}
+```
