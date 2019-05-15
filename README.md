@@ -1588,3 +1588,8 @@ result :
   }
 }
 ```
+
+# Projet annonces immobilières
+
+[Notes projet](projet-immo.md)
+
