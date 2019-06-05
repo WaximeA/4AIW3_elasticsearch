@@ -842,3 +842,279 @@ GET immo_2/_search
   }
 }
 ```
+
+
+```
+## Récupération de mon annonce Waxime avec la géolocalisation
+GET immo_2/_search
+{
+  "size": 10,
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "multi_match": {
+            "query": "cave",
+            "fields": [
+              "titre",
+              "description"
+            ],
+            "operator": "AND"
+          }
+        }
+      ],
+      "filter": {
+        "bool": {
+          "must": [
+            {
+              "geo_bounding_box": {
+                "ignore_unmapped": true,
+                "localisation.geo": {
+                  "bottom_right": {
+                    "lat": 41.78769700539063,
+                    "lon": 3.3837890625000004
+                  },
+                  "top_left": {
+                    "lat": 42.391008609205045,
+                    "lon": 1.9995117187500002
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+## Percolateur
+
+Permet d'indéxer directement des requêtes.
+
+1 . Il faut créer un schama
+```
+PUT immo_3
+{
+  "aliases": {},
+  "mappings": {
+    "_doc": {
+      "properties": {
+        "query": {
+          "type": "percolator"
+        },
+        ...
+```
+
+2 . Indexer une requête percolate
+```
+PUT immo_3/_doc/p2
+{
+  "user": "aveline.maxime@gmail.com",
+  "query": {
+    "bool": {
+      "filter": {
+        "bool": {
+          "must": [
+            {
+              "term": {
+                "type.keyword": "location"
+              }
+            },
+            {
+              "terms": {
+                "localisation.ville.keyword": [
+                  "Paris"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+3 . Rechercher les percolates, les queries qui matchent avec le nouveau document inséré
+```
+GET immo_3/_search
+{
+  "query": {
+    "percolate": {
+      "field": "query",
+      "document": {
+        "titre": "Cave insalubre",
+        "description": "Cave très spacieuse, idéale pour développer sur prestashop",
+        "superficie_m2": "13",
+        "localisation": {
+          "code_postal": "75001",
+          "ville": "Paris",
+          "geo": {
+            "lat": 42.1322,
+            "lon": 2.7223
+          }
+        },
+        "prix_hc": 300,
+        "prix_cc": 350,
+        "type": "location",
+        "nb_pieces": 1,
+        "nb_chambres": 0,
+        "date_publication": "2019-05-11",
+        "parking": false,
+        "haut_debit": false
+      }
+    }
+  }
+}
+```
+
+result: 
+```
+{
+  "took" : 182,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : 3,
+    "max_score" : 0.2876821,
+    "hits" : [
+      {
+        "_index" : "immo_3",
+        "_type" : "_doc",
+        "_id" : "p1",
+        "_score" : 0.2876821,
+        "_source" : {
+          "user" : "aveline.maxime@gmail.com",
+          "query" : {
+            "bool" : {
+              "must" : [
+                {
+                  "multi_match" : {
+                    "query" : "cave",
+                    "fields" : [
+                      "titre",
+                      "description"
+                    ],
+                    "operator" : "AND"
+                  }
+                }
+              ],
+              "filter" : {
+                "bool" : {
+                  "must" : [
+                    {
+                      "term" : {
+                        "type.keyword" : "location"
+                      }
+                    },
+                    {
+                      "terms" : {
+                        "localisation.ville.keyword" : [
+                          "Paris"
+                        ]
+                      }
+                    },
+                    {
+                      "range" : {
+                        "prix_cc" : {
+                          "lt" : 1000
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "fields" : {
+          "_percolator_document_slot" : [
+            0
+          ]
+        }
+      },
+      {
+        "_index" : "immo_3",
+        "_type" : "_doc",
+        "_id" : "p2",
+        "_score" : 0.0,
+        "_source" : {
+          "user" : "aveline.maxime@gmail.com",
+          "query" : {
+            "bool" : {
+              "filter" : {
+                "bool" : {
+                  "must" : [
+                    {
+                      "term" : {
+                        "type.keyword" : "location"
+                      }
+                    },
+                    {
+                      "terms" : {
+                        "localisation.ville.keyword" : [
+                          "Paris"
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "fields" : {
+          "_percolator_document_slot" : [
+            0
+          ]
+        }
+      },
+      {
+        "_index" : "immo_3",
+        "_type" : "_doc",
+        "_id" : "p3",
+        "_score" : 0.0,
+        "_source" : {
+          "user" : "aveline.maxime@gmail.com",
+          "query" : {
+            "bool" : {
+              "filter" : {
+                "bool" : {
+                  "must" : [
+                    {
+                      "term" : {
+                        "type.keyword" : "location"
+                      }
+                    },
+                    {
+                      "terms" : {
+                        "localisation.ville.keyword" : [
+                          "Paris",
+                          "Versaille",
+                          "Dunkerque"
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "fields" : {
+          "_percolator_document_slot" : [
+            0
+          ]
+        }
+      }
+    ]
+  }
+}
+```
