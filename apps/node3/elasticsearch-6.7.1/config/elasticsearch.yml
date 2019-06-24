@@ -88,7 +88,7 @@ discovery.zen.minimum_master_nodes: 2
 #action.destructive_requires_name: true
 
 # Custom node roles
-#node.master: true
-#node.data: false
-#node.ingest: false
+node.master: true
+node.data: false
+node.ingest: false
 #cluster.remote.connect: false

@@ -1593,3 +1593,6 @@ result :
 
 [Notes projet](projet-immo.md)
 
+# Exercices 24/02
+
+[Notes exercices](exercices.md)
