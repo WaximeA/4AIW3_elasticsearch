@@ -219,3 +219,107 @@ GET /_search
     }
 }
 ```
+
+# Exercice 5 :
+
+Utilisez l'API `_reindex` pour créer l'index `twitter2` en partant des données `twitter` de l'exercice précédent. Le mapping du nouvel index `twitter2` devrait permettre de retrouver des documents quelque soit la recherche `développeur` ou `développeuse`.
+
+Poster les deux commandes :
+- création de l'index `twitter2` avec le bon mapping
+- reindex des données depuis l'index `twitter`
+
+Les requêtes à utiliser pour tester sont les suivantes :
+
+```POST twitter2/_search
+{
+  "query": {
+    "multi_match": {
+      "query": "développeur",
+      "fields": [
+        "bio",
+        "handle",
+        "url"
+      ]
+    }
+  }
+}``` 
+
+```POST twitter2/_search
+{
+  "query": {
+    "multi_match": {
+      "query": "développeuse",
+      "fields": [
+        "bio",
+        "handle",
+        "url"
+      ]
+    }
+  }
+}
+``` 
+
+query :
+```
+POST twitter2/_search
+{
+  "query": {
+    "multi_match": {
+      "query": "développeuse",
+      "fields": [
+        "bio",
+        "handle",
+        "url"
+      ]
+    }
+  }
+} 
+
+
+GET twitter2/_search
+
+# reindex
+POST _reindex
+{
+  "source": {
+    "index": "twitter"
+  },
+  "dest": {
+    "index": "twitter2"
+  }
+}
+
+PUT twitter2
+{
+  "settings": {
+    "number_of_shards": 1
+  },
+  "mappings": {
+    "_doc": {
+      "properties": {
+        "id": {
+          "type": "keyword"
+        },
+        "handle": {
+          "type": "text"
+        },
+        "bio": {
+          "type": "text",
+          "analyzer": "french"
+        },
+        "localisation": {
+          "type": "geo_point"
+        },
+        "date": {
+          "type": "date"
+        },
+        "url": {
+          "type": "text"
+        }
+      }
+    }
+  }
+}
+
+DELETE twitter2
+```
