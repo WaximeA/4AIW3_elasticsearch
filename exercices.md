@@ -114,3 +114,60 @@ result :
   }
 }
 ```
+
+## Exercice 3 :
+
+Indexer des tweet (2 ou plus) avec l'API _bulk. Les tweet devront contenir au minimum "message", "geo", "date"
+
+```
+POST _bulk
+{ "index" : { "_index" : "tweet", "_type" : "_doc", "_id" : "1" } }
+{ "doc" : { "pseudo" : "Waxime", "user_id": "@Waxime__", "message": "Coucou @kaiv1_", "date": "24/06/2019 10:20:12", "geo": {"lat": 41.12, "lon": 2.34}}}
+{ "index" : { "_index" : "tweet", "_type" : "_doc", "_id" : "1" } }
+{ "doc" : { "pseudo" : "Waxime", "user_id": "@Waxime__", "message": "Répond moi @kaiv1_ stp", "date": "24/06/2019 10:20:53", "geo": {"lat": 41.12, "lon": 2.34}}}
+```
+
+result :
+
+```
+{
+  "took" : 15,
+  "errors" : false,
+  "items" : [
+    {
+      "index" : {
+        "_index" : "tweet",
+        "_type" : "_doc",
+        "_id" : "1",
+        "_version" : 3,
+        "result" : "updated",
+        "_shards" : {
+          "total" : 2,
+          "successful" : 1,
+          "failed" : 0
+        },
+        "_seq_no" : 2,
+        "_primary_term" : 1,
+        "status" : 200
+      }
+    },
+    {
+      "index" : {
+        "_index" : "tweet",
+        "_type" : "_doc",
+        "_id" : "1",
+        "_version" : 4,
+        "result" : "updated",
+        "_shards" : {
+          "total" : 2,
+          "successful" : 1,
+          "failed" : 0
+        },
+        "_seq_no" : 3,
+        "_primary_term" : 1,
+        "status" : 200
+      }
+    }
+  ]
+}
+```
