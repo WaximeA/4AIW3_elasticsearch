@@ -171,3 +171,51 @@ result :
   ]
 }
 ```
+
+# Exercice 4 :
+Ecrivez une requête de recherche sur l'index `twitter` avec le mot clé `développeur` ou `développeuse`.
+
+Pour créer l'index `twitter`, utilisez cette commande :
+
+```
+POST twitter/_doc/1
+{
+  "id": 1,
+  "handle": "lucianprecup",
+  "bio": "Je suis #développeur search à Paris",
+  "location": {
+    "lat": 41.42,
+    "lon": 2.2
+  },
+  "url" : "https://adelean.com",
+  "date" : "2009-11-11"
+}
+```
+
+query : 
+```
+GET twitter/_search
+{
+  "query": {
+    "multi_match": {
+      "query": "développeur",
+      "fields": [
+        "bio"
+      ],
+      "operator": "AND"
+    }
+  }
+}
+
+# OU 
+
+GET /_search
+{
+    "query": {
+        "query_string" : {
+            "default_field" : "bio",
+            "query" : "développeur OR développeuse"
+        }
+    }
+}
+```
