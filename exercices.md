@@ -56,3 +56,32 @@ node.master: false
 node.data: false
 node.ingest: true
 ```
+
+## Exercice 2 :
+
+Indexer un profile Twitter dans Elasticsearch. La seule contrainte est que la biographie doit contenir la phrase `Je suis #développeur` ou `Je suis #développeuse`.
+
+Utiliser la commande `GET <index>/_doc/<id>` pour vérifier votre index.
+
+Poster la commande utilisée pour l'insert.
+
+```
+PUT twitter/_doc/1
+{
+  "pseudo": "Waxime",
+  "user_id": "@Waxime__",
+  "following": 1376,
+  "followers": 1547,
+  "bio": "Je suis Waxime mais je suis aussi #développeur",
+  "info": {
+    "city": "Paris",
+    "geo": {
+      "lat": 41.12,
+      "lon": 2.34
+    },
+    "website": "https://www.linkedin.com/in/maxime-aveline/",
+    "dob": "21/10/1997"
+  }
+}
+GET twitter/_doc/1
+```
