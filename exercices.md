@@ -323,3 +323,53 @@ PUT twitter2
 
 DELETE twitter2
 ```
+
+# Exercice 6 :
+
+Afficher sur un dashboard Kibana l'endroit des tweet de l'index suivant. En tant que réponse, poster la requête Elasticsearch que Kibana utilise pour afficher le dashboard.
+
+```DELETE tweets
+PUT tweets
+{
+  "mappings": {
+    "_doc": {
+      "properties": {
+        "geo": {
+          "type": "geo_point"
+        }
+      }
+    }
+  }
+}
+
+
+POST _bulk
+{ "index" : { "_index" : "tweets","_type" : "_doc","_id" : "1" } }
+{"message":"salut les amis !","date":"15/02/2015","geo":{"lat":48.8806573,"lon":2.2846554}}
+{ "index" : { "_index" : "tweets", "_type" : "_doc", "_id" : "2" } }
+{"message":"deuxième tweetax","date":"28/02/2015","geo":{"lat":48.0806573,"lon":2.4846554}}
+
+```
+
+result : 
+
+```
+[
+  {
+    "_id": "753f11a0-966d-11e9-bf95-73542d15a3b7",
+    "_type": "dashboard",
+    "_source": {
+      "title": "tweet_dash",
+      "hits": 0,
+      "description": "",
+      "panelsJSON": "[{\"embeddableConfig\":{},\"gridData\":{\"h\":15,\"i\":\"1\",\"w\":24,\"x\":0,\"y\":0},\"id\":\"6326ce40-966d-11e9-bf95-73542d15a3b7\",\"panelIndex\":\"1\",\"type\":\"visualization\",\"version\":\"6.7.1\"}]",
+      "optionsJSON": "{\"darkTheme\":false,\"hidePanelTitles\":false,\"useMargins\":true}",
+      "version": 1,
+      "timeRestore": false,
+      "kibanaSavedObjectMeta": {
+        "searchSourceJSON": "{\"query\":{\"language\":\"lucene\",\"query\":\"\"},\"filter\":[]}"
+      }
+    }
+  }
+]
+```
