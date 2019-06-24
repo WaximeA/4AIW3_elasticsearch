@@ -85,3 +85,32 @@ PUT twitter/_doc/1
 }
 GET twitter/_doc/1
 ```
+
+result :
+```
+{
+  "_index" : "twitter",
+  "_type" : "_doc",
+  "_id" : "345678",
+  "_version" : 2,
+  "_seq_no" : 1,
+  "_primary_term" : 1,
+  "found" : true,
+  "_source" : {
+    "pseudo" : "Waxime",
+    "user_id" : "@Waxime__",
+    "following" : 1376,
+    "followers" : 1547,
+    "bio" : "Je suis Waxime mais je suis aussi #développeur",
+    "info" : {
+      "city" : "Paris",
+      "geo" : {
+        "lat" : 41.12,
+        "lon" : 2.34
+      },
+      "website" : "https://www.linkedin.com/in/maxime-aveline/",
+      "dob" : "21/10/1997"
+    }
+  }
+}
+```
