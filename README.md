@@ -1596,3 +1596,7 @@ result :
 # Exercices 24/02
 
 [Notes exercices](exercices.md)
+
+# TP Noté 15/07
+
+[Notes tp noté](tpnote.md)
